@@ -1,0 +1,4 @@
+mlruns
+ocm_tutorial/temp
+
+*.egg-info
