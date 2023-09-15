@@ -1,0 +1,17 @@
+2023-09-15 14:49:18,049 - [INFO] Welcome to this year's OCM tutorial :)
+2023-09-15 14:50:44,364 - [INFO] Epoch 0: avg. loss= 1.69 nats
+2023-09-15 14:50:45,914 - [INFO] Epoch 0: validation acc= 80.62%
+2023-09-15 14:52:06,948 - [INFO] Epoch 1: avg. loss= 0.52 nats
+2023-09-15 14:52:08,454 - [INFO] Epoch 1: validation acc= 89.52%
+2023-09-15 14:53:34,311 - [INFO] Epoch 2: avg. loss= 0.57 nats
+2023-09-15 14:53:35,972 - [INFO] Epoch 2: validation acc= 90.72%
+2023-09-15 14:55:00,176 - [INFO] Epoch 3: avg. loss= 0.39 nats
+2023-09-15 14:55:01,672 - [INFO] Epoch 3: validation acc= 90.47%
+2023-09-15 14:56:23,278 - [INFO] Epoch 4: avg. loss= 0.27 nats
+2023-09-15 14:56:24,806 - [INFO] Epoch 4: validation acc= 94.42%
+2023-09-15 14:57:49,260 - [INFO] Epoch 5: avg. loss= 0.26 nats
+2023-09-15 14:57:50,790 - [INFO] Epoch 5: validation acc= 95.97%
+2023-09-15 14:59:17,746 - [INFO] Epoch 6: avg. loss= 0.18 nats
+2023-09-15 14:59:19,338 - [INFO] Epoch 6: validation acc= 95.13%
+2023-09-15 15:07:56,352 - [INFO] Epoch 7: avg. loss= 0.14 nats
+2023-09-15 15:07:57,847 - [INFO] Epoch 7: validation acc= 95.82%
