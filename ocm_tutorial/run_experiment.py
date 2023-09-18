@@ -12,6 +12,8 @@ import torch
 import sklearn.metrics
 import os
 
+import mlflow
+
 
 def plot_prediction(X, y_true, y_pred, filename=None):
 
@@ -25,6 +27,9 @@ def plot_prediction(X, y_true, y_pred, filename=None):
 
 
 def main():
+
+    mlflow.set_tracking_uri("../mlruns")
+    mlflow.set_experiment(experiment_name="mnist")
 
     make_temp_dir()
     setup_logging("./temp/log.txt")
@@ -44,57 +49,73 @@ def main():
     val_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-    #model = MLPModel(input_size=28*28, hidden_units=[128, 128], n_classes=10, activation=torch.nn.ReLU)
-    model = CNNModel(input_size=28,conv_filters=[32,64], kernel_sizes=[3,3], pooling_size=2, hidden_units=[128], n_classes=10)
+    model = MLPModel(input_size=28*28, hidden_units=[128, 128], n_classes=10, activation=torch.nn.ReLU)
+    #model = CNNModel(input_size=28,conv_filters=[32,64], kernel_sizes=[3,3], pooling_size=2, hidden_units=[128], n_classes=10)
     save_model_architecture(model,filename="./temp/architecture.txt")
+
 
     opt = torch.optim.Adam(model.parameters(), lr=learning_rate)
     cross_entropy = torch.nn.CrossEntropyLoss()
 
-    for epoch in range(n_epochs):
+    with mlflow.start_run() as run:
 
-        epoch_loss = 0.0
-        for X,y in train_loader:
+        mlflow.log_artifact("./temp/architecture.txt")
 
-            loss = cross_entropy(model(X), y)
+        for epoch in range(n_epochs):
 
-            loss.backward()
-            opt.step()
+            epoch_loss = 0.0
+            for X,y in train_loader:
 
-            epoch_loss += loss
+                loss = cross_entropy(model(X), y)
+                loss.backward()
+                opt.step()
 
-        logging.info(f"Epoch {epoch}: avg. loss={epoch_loss / len(train_loader) : .2f} nats")
+                epoch_loss += loss
 
-        val_acc = compute_metric(val_loader, model, metric=sklearn.metrics.accuracy_score)
-        logging.info(f"Epoch {epoch}: validation acc={ val_acc * 100 : .2f}%")
+                # log the loss value every step
+                mlflow.log_metric("training/loss", value=loss.item())
 
-    test_acc = compute_metric(test_loader, model, metric=sklearn.metrics.accuracy_score)
-    logging.info("Training done.")
-    logging.info(f"test acc={ test_acc * 100 : .2f}%")
+            logging.info(f"Epoch {epoch}: avg. loss={epoch_loss / len(train_loader) : .2f} nats")
+            mlflow.log_metric("training/epoch_loss", value=epoch_loss / len(train_loader))
 
-    best_test_pred_probs, best_test_pred_idx = get_best_predictions(test_loader, model)
-    logging.info(f"Best predictions: {best_test_pred_probs}")
+            val_acc = compute_metric(val_loader, model, metric=sklearn.metrics.accuracy_score)
+            logging.info(f"Epoch {epoch}: validation acc={ val_acc * 100 : .2f}%")
+            mlflow.log_metric("validation/accuracy", value=val_acc * 100)
 
-    worst_test_pred_probs, worst_test_pred_idx = get_worst_predictions(test_loader, model)
-    logging.info(f"Worst predictions: {worst_test_pred_probs}")
+            mlflow.log_artifact("./temp/log.txt")
 
-    os.mkdir("./temp/predictions")
+        test_acc = compute_metric(test_loader, model, metric=sklearn.metrics.accuracy_score)
+        logging.info("Training done.")
+        logging.info(f"test acc={ test_acc * 100 : .2f}%")
+        mlflow.log_metric("test/accuracy", value=test_acc * 100)
 
-    # save the best test predictions
-    for i, (prob, idx) in enumerate(zip(best_test_pred_probs.tolist(), best_test_pred_idx.tolist())):
-        X, y = test_dataset[idx]
-        plot_prediction(X.squeeze(),
-                        y_true=y,
-                        y_pred=model(X).argmax(dim=-1).item(),
-                        filename=f"./temp/predictions/best_{i}.pdf")
+        best_test_pred_probs, best_test_pred_idx = get_best_predictions(test_loader, model)
+        logging.info(f"Best predictions: {best_test_pred_probs}")
+        mlflow.log_metric("best_predition_prob", value=best_test_pred_probs[0].item())
 
-    # save the worst test predictions
-    for i, (prob, idx) in enumerate(zip(worst_test_pred_probs.tolist(), worst_test_pred_idx.tolist())):
-        X, y = test_dataset[idx]
-        plot_prediction(X.squeeze(),
-                        y_true=y,
-                        y_pred=model(X).argmax(dim=-1).item(),
-                        filename=f"./temp/predictions/worst_{i}.pdf")
+        worst_test_pred_probs, worst_test_pred_idx = get_worst_predictions(test_loader, model)
+        logging.info(f"Worst predictions: {worst_test_pred_probs}")
+        mlflow.log_metric("worst_predition_prob", value=worst_test_pred_probs[0].item())
+
+        os.mkdir("./temp/predictions")
+
+        # save the best test predictions
+        for i, (prob, idx) in enumerate(zip(best_test_pred_probs.tolist(), best_test_pred_idx.tolist())):
+            X, y = test_dataset[idx]
+            plot_prediction(X.squeeze(),
+                            y_true=y,
+                            y_pred=model(X).argmax(dim=-1).item(),
+                            filename=f"./temp/predictions/best_{i}.pdf")
+            mlflow.log_artifact(f"./temp/predictions/best_{i}.pdf", "predictions")
+
+        # save the worst test predictions
+        for i, (prob, idx) in enumerate(zip(worst_test_pred_probs.tolist(), worst_test_pred_idx.tolist())):
+            X, y = test_dataset[idx]
+            plot_prediction(X.squeeze(),
+                            y_true=y,
+                            y_pred=model(X).argmax(dim=-1).item(),
+                            filename=f"./temp/predictions/worst_{i}.pdf")
+            mlflow.log_artifact(f"./temp/predictions/worst_{i}.pdf", "predictions")
 
 
 if __name__ == "__main__":
