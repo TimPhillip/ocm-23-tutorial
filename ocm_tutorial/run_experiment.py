@@ -49,8 +49,8 @@ def main():
     val_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-    model = MLPModel(input_size=28*28, hidden_units=[128, 128], n_classes=10, activation=torch.nn.ReLU)
-    #model = CNNModel(input_size=28,conv_filters=[32,64], kernel_sizes=[3,3], pooling_size=2, hidden_units=[128], n_classes=10)
+    #model = MLPModel(input_size=28*28, hidden_units=[128, 128], n_classes=10, activation=torch.nn.ReLU)
+    model = CNNModel(input_size=28,conv_filters=[32,64], kernel_sizes=[3,3], pooling_size=2, hidden_units=[128], n_classes=10)
     save_model_architecture(model,filename="./temp/architecture.txt")
 
 
@@ -58,6 +58,16 @@ def main():
     cross_entropy = torch.nn.CrossEntropyLoss()
 
     with mlflow.start_run() as run:
+
+        # log the model parameters
+        mlflow.log_param("learning_rate", learning_rate)
+        mlflow.log_param("model_class", model.__class__.__name__)
+
+        # tag the run
+        mlflow.set_tags(tags={
+            "ocm-23": "true",
+            "mlflow": "used"
+        })
 
         mlflow.log_artifact("./temp/architecture.txt")
 
@@ -83,6 +93,11 @@ def main():
             mlflow.log_metric("validation/accuracy", value=val_acc * 100)
 
             mlflow.log_artifact("./temp/log.txt")
+
+        # save the weights of the model
+        torch.save(model, "./temp/model.pt")
+        mlflow.log_artifact("./temp/model.pt")
+
 
         test_acc = compute_metric(test_loader, model, metric=sklearn.metrics.accuracy_score)
         logging.info("Training done.")
