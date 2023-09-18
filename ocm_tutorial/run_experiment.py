@@ -32,25 +32,36 @@ def main():
     batch_size = 256
     learning_rate = 1e-4
     n_epochs = 10
+    validation_frac = 0.1
+
+    architecture_path = "./temp/architecture.txt"
 
 
     logging.info("Welcome to this year's OCM tutorial :)")
 
+    # prepare the datasets
+    logging.info("Preparing the datasets.")
     training_dataset = data.MNIST(train=True)
-    training_dataset, validation_dataset = random_split(training_dataset, [0.9, 0.1])
+    training_dataset, validation_dataset = random_split(training_dataset, [1.0 - validation_frac, validation_frac])
     test_dataset = data.MNIST(train=False)
 
     train_loader = DataLoader(training_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
+    # preparing the model
+    logging.info("Preparing the model.")
     #model = MLPModel(input_size=28*28, hidden_units=[128, 128], n_classes=10, activation=torch.nn.ReLU)
     model = CNNModel(input_size=28,conv_filters=[32,64], kernel_sizes=[3,3], pooling_size=2, hidden_units=[128], n_classes=10)
-    save_model_architecture(model,filename="./temp/architecture.txt")
+    save_model_architecture(model,filename=architecture_path)
 
+    # preparing the optimizer
+    logging.info("Preparing the optimizer")
     opt = torch.optim.Adam(model.parameters(), lr=learning_rate)
     cross_entropy = torch.nn.CrossEntropyLoss()
 
+    # start training
+    logging.info("Start training:")
     for epoch in range(n_epochs):
 
         epoch_loss = 0.0
@@ -68,13 +79,17 @@ def main():
         val_acc = compute_metric(val_loader, model, metric=sklearn.metrics.accuracy_score)
         logging.info(f"Epoch {epoch}: validation acc={ val_acc * 100 : .2f}%")
 
-    test_acc = compute_metric(test_loader, model, metric=sklearn.metrics.accuracy_score)
+    # evaluate after training
     logging.info("Training done.")
+    logging.info("Evaluation:")
+    test_acc = compute_metric(test_loader, model, metric=sklearn.metrics.accuracy_score)
     logging.info(f"test acc={ test_acc * 100 : .2f}%")
 
+    # find best predictions
     best_test_pred_probs, best_test_pred_idx = get_best_predictions(test_loader, model)
     logging.info(f"Best predictions: {best_test_pred_probs}")
 
+    # find worst predictions
     worst_test_pred_probs, worst_test_pred_idx = get_worst_predictions(test_loader, model)
     logging.info(f"Worst predictions: {worst_test_pred_probs}")
 
