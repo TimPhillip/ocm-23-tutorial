@@ -13,6 +13,8 @@ import sklearn.metrics
 import os
 
 import mlflow
+import hydra
+from omegaconf import OmegaConf
 
 
 def plot_prediction(X, y_true, y_pred, filename=None):
@@ -26,52 +28,51 @@ def plot_prediction(X, y_true, y_pred, filename=None):
     plt.show()
 
 
-def main():
+@hydra.main(config_path="../config", config_name="ocm_experiment", version_base=None)
+def main(cfg):
 
-    mlflow.set_tracking_uri("../mlruns")
-    mlflow.set_experiment(experiment_name="mnist")
+    print(OmegaConf.to_yaml(cfg))
+
+    mlflow.set_tracking_uri(cfg.logging.tracking_server)
+    mlflow.set_experiment(experiment_name=cfg.logging.experiment_name)
 
     make_temp_dir()
     setup_logging("./temp/log.txt")
 
-    batch_size = 256
-    learning_rate = 1e-4
-    n_epochs = 10
-
-
     logging.info("Welcome to this year's OCM tutorial :)")
 
-    training_dataset = data.MNIST(train=True)
-    training_dataset, validation_dataset = random_split(training_dataset, [0.9, 0.1])
-    test_dataset = data.MNIST(train=False)
+    training_dataset = hydra.utils.instantiate(cfg.data.training)
+    training_dataset, validation_dataset = random_split(training_dataset, [1.0 - cfg.data.validation_fraction,
+                                                                           cfg.data.validation_fraction])
+    test_dataset = hydra.utils.instantiate(cfg.data.training)
 
-    train_loader = DataLoader(training_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(training_dataset, batch_size=cfg.batch_size, shuffle=True)
+    val_loader = DataLoader(validation_dataset, batch_size=cfg.batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=cfg.batch_size, shuffle=False)
 
-    #model = MLPModel(input_size=28*28, hidden_units=[128, 128], n_classes=10, activation=torch.nn.ReLU)
-    model = CNNModel(input_size=28,conv_filters=[32,64], kernel_sizes=[3,3], pooling_size=2, hidden_units=[128], n_classes=10)
+    model = hydra.utils.instantiate(cfg.model)
     save_model_architecture(model,filename="./temp/architecture.txt")
 
 
-    opt = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    opt = torch.optim.Adam(model.parameters(), lr=cfg.learning_rate)
     cross_entropy = torch.nn.CrossEntropyLoss()
 
     with mlflow.start_run() as run:
 
         # log the model parameters
-        mlflow.log_param("learning_rate", learning_rate)
+        mlflow.log_param("learning_rate", cfg.learning_rate)
         mlflow.log_param("model_class", model.__class__.__name__)
 
         # tag the run
         mlflow.set_tags(tags={
             "ocm-23": "true",
-            "mlflow": "used"
+            "mlflow": "used",
+            "hydra": "used"
         })
 
         mlflow.log_artifact("./temp/architecture.txt")
 
-        for epoch in range(n_epochs):
+        for epoch in range(cfg.epochs):
 
             epoch_loss = 0.0
             for X,y in train_loader:

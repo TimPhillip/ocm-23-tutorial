@@ -1,4 +1,5 @@
 import torch.nn as nn
+import hydra
 
 
 class MLPModel(nn.Module):
@@ -14,7 +15,7 @@ class MLPModel(nn.Module):
                 nn.Linear(in_features=in_units, out_features=out_units)
             )
             if i < len(n_units) - 2:
-                layers.append(activation())
+                layers.append(activation)
 
         self._layers = nn.Sequential(*layers)
 

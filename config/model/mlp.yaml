@@ -1,0 +1,10 @@
+_target_: ocm_tutorial.model.mlp_model.MLPModel
+
+input_size: 784 # 28 * 28
+hidden_units:
+  - 128
+  - 128
+
+activation:
+  _target_: torch.nn.ReLU
+n_classes: 10

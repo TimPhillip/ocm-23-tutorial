@@ -1,0 +1,16 @@
+_target_: ocm_tutorial.model.cnn_model.CNNModel
+
+input_size: 28
+conv_filters:
+  - 32
+  - 64
+
+kernel_sizes:
+  - 3
+  - 3
+
+hidden_units:
+  - 128
+
+n_classes: 10
+pooling_size: 2

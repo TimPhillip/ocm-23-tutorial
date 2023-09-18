@@ -1,0 +1,13 @@
+# @package __global__
+defaults:
+  - /data/@data.training: mnist
+  - /data/@data.test: mnist
+  - /model: mlp
+
+data:
+  validation_fraction: 0.1
+  test:
+    train: False
+
+logging:
+  experiment_name: mnist
